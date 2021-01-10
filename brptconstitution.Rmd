@@ -1,0 +1,135 @@
+---
+title: "Brazilian and Portuguese Constitutions"
+output: html_notebook
+---
+
+```{r}
+install.packages("pacman")
+pacman::p_load(stopwords,tokenizers,wordcloud2,tidytext,tm,dplyr,ggwordcloud,readr,stringr,widyr,geobr,webshot,devtools,htmlwidgets,patchwork)
+options(repos = getOption("repos")["CRAN"])
+devtools::install_github("lchiffon/wordcloud2")
+library(wordcloud2)
+webshot::install_phantomjs()
+```
+
+
+```{r}
+textbr = read_lines(file.choose(),skip_empty_rows = T,na = "",progress = T)
+length(textbr)
+head(textbr)
+```
+
+```{r}
+text_br <- tibble(line = 1:2506, text = textbr)
+str(text_br)
+text_br$text = as.character(text_br$text)
+text_br <- text_br %>%
+  unnest_tokens(word, text)
+head(text_br)
+```
+
+```{r}
+stopwords = data.frame(word = stopwords::stopwords("pt", source = "stopwords-iso"))
+mystopwords = data.frame(word = c("art","disposto","termos","inciso","seção","título","caput","b","á"))
+romans = data.frame(word= tolower(as.roman(1:100)))
+stopwords = rbind(stopwords,romans,mystopwords)
+names(stopwords) = "word"
+text_br = text_br %>% 
+  anti_join(stopwords) %>% 
+  filter(!str_detect(word, "^\\d"))
+head(text_br)
+```
+
+```{r}
+p1 = text_br  %>% 
+  count(word, sort = TRUE) %>%
+  filter(n > 50) %>%
+  mutate(word = reorder(word, n)) %>%
+  head(10) %>%
+  ggplot(aes(n, word,fill=rep_len( c("#009c3b","#002776","#ebd534"), 10 ))) +
+  geom_col() +
+  labs(y = NULL,x=NULL) +
+  scale_fill_manual(values=c("#ebd534","#009c3b","#002776")) +
+  theme(legend.position = "none")
+p1
+```
+
+```{r}
+wordsbr = text_br %>% 
+  group_by(word) %>% 
+  summarise(freq = n()) %>% 
+  arrange(desc(freq))  %>% 
+  as.data.frame()
+wcbr = wordcloud2(wordsbr[1:1000,], figPath = "brasil2.jpg",size = 1,color = rep_len( c("#009c3b","#ebd534","#002776"), 1000 ),backgroundColor = "white")
+wcbr
+```
+
+```{r}
+htmlwidgets::saveWidget(wcbr,"br.html",selfcontained = F)
+webshot::webshot("br.html","br.png",vwidth = 1992, vheight = 1744, delay =10)
+```
+
+
+
+```{r}
+textpt = read_lines("const pt.txt",skip_empty_rows = T,na = "",progress = T)
+length(textpt)
+head(textpt)
+```
+
+```{r}
+text_pt <- tibble(line = 1:2040, text = textpt)
+str(text_pt)
+text_pt$text = as.character(text_pt$text)
+text_pt <- text_pt %>%
+  unnest_tokens(word, text)
+text_pt = text_pt %>% 
+  anti_join(stopwords) %>% 
+  filter(!str_detect(word, "^\\d"))
+head(text_pt)
+```
+
+```{r}
+p2 = text_pt  %>% 
+  count(word, sort = TRUE) %>%
+  filter(n > 50) %>%
+  mutate(word = reorder(word, n)) %>%
+  head(10) %>%
+  ggplot(aes(n, word,fill=rep_len( c("#006600","#9e0000"), 10 ))) +
+  geom_col() +
+  labs(y = NULL,x=NULL) +
+  scale_fill_manual(values=c("#006600","#9e0000")) +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+wordspt = text_pt %>% 
+  group_by(word) %>% 
+  summarise(freq = n()) %>% 
+  arrange(desc(freq))  %>% 
+  as.data.frame()
+```
+
+```{r}
+wcpt = wordcloud2(wordspt[1:1000,], figPath = "portugal.jpg",size = 1,color = rep_len( c("#006600","#9e0000"), 1000 ),backgroundColor = "white")
+wcpt
+```
+
+
+```{r}
+saveWidget(wcpt,"pt.html",selfcontained = FALSE)
+webshot("pt.html","fig_pt.pdf", delay =5, vwidth = 480, vheight=480)
+```
+
+```{r}
+p1 + p2
+wcbr
+wcpt
+```
+
+
+```{r}
+
+```
+
