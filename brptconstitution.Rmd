@@ -5,7 +5,7 @@ output: html_notebook
 
 ```{r}
 install.packages("pacman")
-pacman::p_load(stopwords,tokenizers,wordcloud2,tidytext,tm,dplyr,ggwordcloud,readr,stringr,widyr,geobr,webshot,devtools,htmlwidgets,patchwork)
+pacman::p_load(stopwords,tokenizers,wordcloud2,tidytext,tm,dplyr,ggwordcloud,readr,stringr,widyr,geobr,webshot,devtools,htmlwidgets,patchwork,forcats)
 options(repos = getOption("repos")["CRAN"])
 devtools::install_github("lchiffon/wordcloud2")
 library(wordcloud2)
@@ -37,7 +37,7 @@ names(stopwords) = "word"
 text_br = text_br %>% 
   anti_join(stopwords) %>% 
   filter(!str_detect(word, "^\\d"))
-head(text_br)
+head(text_br,10)
 ```
 
 ```{r}
@@ -45,12 +45,13 @@ p1 = text_br  %>%
   count(word, sort = TRUE) %>%
   filter(n > 50) %>%
   mutate(word = reorder(word, n)) %>%
-  head(10) %>%
-  ggplot(aes(n, word,fill=rep_len( c("#009c3b","#002776","#ebd534"), 10 ))) +
+  head(20) %>%
+  ggplot(aes(n, word,fill=rep_len( c("#009c3b","#002776","#ebd534"), 20 ))) +
   geom_col() +
-  labs(y = NULL,x=NULL) +
+  labs(title = "Most Common words in the Brazilian Constitution",y = NULL,x=NULL) +
   scale_fill_manual(values=c("#ebd534","#009c3b","#002776")) +
-  theme(legend.position = "none")
+  theme(legend.position = "none")+
+  geom_text(aes(label = n), hjust = 0)
 p1
 ```
 
@@ -97,9 +98,11 @@ p2 = text_pt  %>%
   head(10) %>%
   ggplot(aes(n, word,fill=rep_len( c("#006600","#9e0000"), 10 ))) +
   geom_col() +
-  labs(y = NULL,x=NULL) +
+  labs(title = "Most Common words in the Portuguese Constitution",y = NULL,x=NULL) +
   scale_fill_manual(values=c("#006600","#9e0000")) +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  geom_text(aes(label = n), hjust = 0)
+p2
 ```
 
 
@@ -122,14 +125,38 @@ saveWidget(wcpt,"pt.html",selfcontained = FALSE)
 webshot("pt.html","fig_pt.pdf", delay =5, vwidth = 480, vheight=480)
 ```
 
-```{r}
-p1 + p2
+```{r fig.height = 6, fig.width = 12}
+p1 + p2 + plot_annotation(
+  title = 'Most common words in the Constitution'
+)
 wcbr
 wcpt
 ```
 
-
 ```{r}
+wordsbr$country = "br"
+wordspt$country = "pt"
 
+teste = rbind(wordsbr,wordspt)
+book_tf_idf = teste %>% bind_tf_idf(word, country, freq)
+book_tf_idf %>%
+  arrange(desc(tf_idf))
+```
+
+
+
+```{r fig.height = 6, fig.width = 10}
+
+countries <- c("Brazil", "Portugal")
+names(countries) <- c("br", "pt")
+
+book_tf_idf %>%
+  group_by(country) %>%
+  slice_max(tf_idf, n = 10) %>%
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = country)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~country, ncol = 2, scales = "free",labeller = labeller(country = countries)) +
+  labs(x = "tf-idf", y = NULL,title="Distinguishing words")
 ```
 
