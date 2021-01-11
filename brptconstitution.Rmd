@@ -134,10 +134,22 @@ wcpt
 ```
 
 ```{r}
+ggplot(teste, aes(freq/total, fill = country)) +
+  geom_histogram(show.legend = FALSE) +
+  #xlim(NA, 0.0009) +
+  facet_wrap(~country, ncol = 2, scales = "free_y")
+```
+
+
+```{r}
 wordsbr$country = "br"
+wordsbr$total = nrow(wordsbr)
 wordspt$country = "pt"
+wordspt$total = nrow(wordspt)
 
 teste = rbind(wordsbr,wordspt)
+teste = teste %>%
+  mutate(teste = freq/total)
 book_tf_idf = teste %>% bind_tf_idf(word, country, freq)
 book_tf_idf %>%
   arrange(desc(tf_idf))
@@ -157,6 +169,7 @@ book_tf_idf %>%
   ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = country)) +
   geom_col(show.legend = FALSE) +
   facet_wrap(~country, ncol = 2, scales = "free",labeller = labeller(country = countries)) +
-  labs(x = "tf-idf", y = NULL,title="Distinguishing words")
+  labs(x = "tf-idf", y = NULL,title="Distinguishing words")+
+  scale_fill_manual(values=c("#002776","#9e0000")) 
 ```
 
